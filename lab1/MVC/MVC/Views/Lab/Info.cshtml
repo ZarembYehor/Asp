@@ -1,0 +1,25 @@
+﻿@model dynamic
+@{
+    ViewData["Title"] = "Lab Info";
+}
+
+<div>
+    <table>
+        <tr>
+            <td>№</td>
+            <td>@Model.Number</td>
+        </tr>
+        <tr>
+            <td>Тема</td>
+            <td>@Model.Topic</td>
+        </tr>
+        <tr>
+            <td>Мета</td>
+            <td>@Model.Purpose</td>
+        </tr>
+        <tr>
+            <td>Виконавець</td>
+            <td>@Model.Student</td>
+        </tr>
+    </table>
+</div>
