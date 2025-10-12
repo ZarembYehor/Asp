@@ -1,0 +1,35 @@
+@model AbsoluteCinema.Models.ViewModels.FilmsListViewModel
+
+<h2 class="mb-4">Films</h2>
+
+<div class="row row-cols-1 row-cols-md-2 g-4">
+    @foreach (var film in Model.Films)
+    {
+        <div class="col">
+            <div class="card h-100">
+                @if (!string.IsNullOrEmpty(film.PosterUrl))
+                {
+                    <img src="@film.PosterUrl" class="card-img-top" alt="@film.Title" />
+                }
+                <div class="card-body">
+                    <h5 class="card-title">@film.Title (@film.ReleaseYear)</h5>
+                    <p class="card-text">@film.Description</p>
+                    <p class="mb-1"><strong>Genre:</strong> @film.Genre</p>
+                    <p class="mb-1"><strong>Price:</strong> @film.TicketPrice.ToString("c")</p>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        @for (int i = 1; i <= Model.PagingInfo.TotalPages; i++)
+        {
+            var activeClass = i == Model.PagingInfo.CurrentPage ? "active" : "";
+            <li class="page-item @activeClass">
+                <a class="page-link" asp-action="Index" asp-controller="Home" asp-route-page="@i">@i</a>
+            </li>
+        }
+    </ul>
+</nav>
