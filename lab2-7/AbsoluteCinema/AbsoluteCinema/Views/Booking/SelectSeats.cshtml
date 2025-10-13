@@ -1,0 +1,120 @@
+﻿@using AbsoluteCinema.Models
+@{
+    ViewData["Title"] = "Seat Booking";
+
+    var permanentBookedSeats = BookingDataStore.GetBookedSeats().ToList();
+}
+
+<h2 class="mb-4">🎟 Select Your Seats</h2>
+<h4 class="mb-5 text-muted">Screen is here ⬆️</h4>
+
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success">@TempData["Message"]</div>
+}
+
+<div id="seat-container" class="d-flex flex-column gap-2 p-5 border rounded-3 bg-light">
+    @for (int row = 1; row <= 3; row++)
+    {
+        <div class="d-flex justify-content-center gap-2">
+            @for (int number = 1; number <= 5; number++)
+            {
+                var isBooked = permanentBookedSeats.Any(s => s.Row == row && s.Number == number);
+                var baseClass = isBooked ? "seat-booked" : "seat-available";
+
+                <div class="seat @baseClass"
+                     data-row="@row"
+                     data-number="@number"
+                     data-is-booked="@isBooked.ToString().ToLower()">
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<a asp-action="Confirm" class="btn btn-success mt-4">Confirm Booking</a>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('.seat-available').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const row = btn.dataset.row;
+                const number = btn.dataset.number;
+
+                const response = await fetch(`/Booking/SelectSeat?row=${row}&number=${number}`, {
+                    method: "POST"
+                });
+
+                if (response.ok) {
+                    btn.classList.toggle('seat-selected');
+                }
+            });
+        });
+
+        async function loadSelectedSeats() {
+             const response = await fetch('/Booking/GetSelectedSeats');
+             const selectedSeats = await response.json();
+
+             selectedSeats.forEach(seat => {
+                 const seatElement = document.querySelector(`.seat-available[data-row="${seat.row}"][data-number="${seat.number}"]`);
+
+                 if (seatElement) {
+                     seatElement.classList.add('seat-selected');
+                 }
+             });
+        }
+
+        loadSelectedSeats();
+    </script>
+}
+
+<style>
+    .seat {
+        width: 40px;
+        height: 40px;
+        margin: 5px;
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0;
+        transition: all 0.2s ease-in-out;
+        border: 1px solid #ced4da;
+    }
+
+    .seat-available {
+        background-color: #f8f9fa;
+        cursor: pointer;
+    }
+
+        .seat-available:hover {
+            background-color: #e9ecef;
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+        }
+
+    .seat-booked {
+        background-color: #dc3545; 
+        cursor: not-allowed;
+        opacity: 0.8;
+        border-color: #dc3545;
+    }
+
+    .seat-selected {
+        background-color: #28a745;
+        border-color: #28a745;
+        box-shadow: 0 0 5px rgba(40, 167, 69, 0.7);
+    }
+
+    #seat-container::before {
+        content: "SCREEN";
+        display: block;
+        text-align: center;
+        margin-bottom: 20px;
+        padding: 10px;
+        background-color: #343a40;
+        color: white;
+        font-weight: bold;
+        border-radius: 5px;
+        letter-spacing: 5px;
+    }
+</style>

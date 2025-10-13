@@ -1,35 +1,47 @@
 @model AbsoluteCinema.Models.ViewModels.FilmsListViewModel
 
-<h2 class="mb-4">Films</h2>
+<h1 class="mb-5 display-5 fw-bold text-dark border-bottom pb-3">Currently Showing</h1>
 
-<div class="row row-cols-1 row-cols-md-2 g-4">
-    @foreach (var film in Model.Films)
+<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    @if (Model.Films.Any())
     {
-        <div class="col">
-            <div class="card h-100">
-                @if (!string.IsNullOrEmpty(film.PosterUrl))
-                {
-                    <img src="@film.PosterUrl" class="card-img-top" alt="@film.Title" />
-                }
-                <div class="card-body">
-                    <h5 class="card-title">@film.Title (@film.ReleaseYear)</h5>
-                    <p class="card-text">@film.Description</p>
-                    <p class="mb-1"><strong>Genre:</strong> @film.Genre</p>
-                    <p class="mb-1"><strong>Price:</strong> @film.TicketPrice.ToString("c")</p>
-                </div>
+        @foreach (var film in Model.Films)
+        {
+            <partial name="_FilmSummary" model="film" />
+        }
+    }
+    else
+    {
+        <div class="col-12">
+            <div class="alert alert-warning shadow-sm" role="alert">
+                <h4 class="alert-heading"><i class="bi bi-exclamation-triangle-fill me-2"></i> No Films Available</h4>
+                <p>We couldn't find any films matching the selected criteria.</p>
+                <hr>
+                <a asp-action="Index" asp-route-genre="" class="btn btn-warning rounded-pill fw-medium">
+                    Show All Films
+                </a>
             </div>
         </div>
     }
 </div>
 
-<nav aria-label="Page navigation" class="mt-4">
-    <ul class="pagination justify-content-center">
-        @for (int i = 1; i <= Model.PagingInfo.TotalPages; i++)
-        {
-            var activeClass = i == Model.PagingInfo.CurrentPage ? "active" : "";
-            <li class="page-item @activeClass">
-                <a class="page-link" asp-action="Index" asp-controller="Home" asp-route-page="@i">@i</a>
-            </li>
-        }
-    </ul>
-</nav>
+@if (Model.PagingInfo.TotalPages > 1)
+{
+    <nav aria-label="Page navigation" class="mt-5 d-flex justify-content-center">
+        <ul class="pagination pagination-lg shadow-sm rounded-pill p-2 bg-light">
+            @for (int i = 1; i <= Model.PagingInfo.TotalPages; i++)
+            {
+                var activeClass = i == Model.PagingInfo.CurrentPage ? "active" : "";
+                <li class="page-item @activeClass mx-1">
+                    <a class="page-link rounded-pill px-4 @(activeClass == "active" ? "bg-primary text-white border-primary" : "text-dark border-0")"
+                       asp-action="Index"
+                       asp-controller="Home"
+                       asp-route-page="@i"
+                       asp-route-genre="@Model.CurrentGenre">
+                        @i
+                    </a>
+                </li>
+            }
+        </ul>
+    </nav>
+}

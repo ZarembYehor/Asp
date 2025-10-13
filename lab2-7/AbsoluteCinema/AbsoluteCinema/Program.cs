@@ -1,8 +1,6 @@
-using AbsoluteCinema.Models;
+﻿using AbsoluteCinema.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Migrations;
-using static AbsoluteCinema.Models.CinemaDbContext;
-
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AbsoluteCinema
 {
@@ -20,16 +18,23 @@ namespace AbsoluteCinema
 
             builder.Services.AddScoped<ICinemaRepository, EFCinemaRepository>();
 
+            builder.Services.AddDistributedMemoryCache();
+            builder.Services.AddSession(options =>
+            {
+                options.IdleTimeout = TimeSpan.FromMinutes(30);
+                options.Cookie.HttpOnly = true;
+                options.Cookie.IsEssential = true;
+            });
+
             var app = builder.Build();
 
             app.UseStaticFiles();
-
+            app.UseSession(); 
             app.MapDefaultControllerRoute();
 
             SeedData.EnsurePopulated(app);
 
             app.Run();
-
         }
     }
 }

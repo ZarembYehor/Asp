@@ -8,21 +8,22 @@ namespace AbsoluteCinema.Controllers
     public class HomeController : Controller
     {
         private readonly ICinemaRepository repository;
-        private const int PageSize = 3; 
+        private const int PageSize = 3;
 
         public HomeController(ICinemaRepository repo)
         {
             repository = repo;
         }
 
-        public IActionResult Index(int page = 1)
+        public IActionResult Index(string? genre, int page = 1)
         {
-            var films = repository.Films
-                .OrderBy(f => f.Title); 
+            var filmsQuery = repository.Films
+                .Where(f => genre == null || f.Genre == genre)
+                .OrderBy(f => f.Title);
 
             var viewModel = new FilmsListViewModel
             {
-                Films = films
+                Films = filmsQuery
                     .Skip((page - 1) * PageSize)
                     .Take(PageSize)
                     .ToList(),
@@ -30,9 +31,11 @@ namespace AbsoluteCinema.Controllers
                 {
                     CurrentPage = page,
                     ItemsPerPage = PageSize,
-                    TotalItems = films.Count()
-                }
+                    TotalItems = filmsQuery.Count() 
+                },
+                CurrentGenre = genre 
             };
+
 
             return View(viewModel);
         }
