@@ -1,0 +1,54 @@
+﻿@model IEnumerable<AbsoluteCinema.Models.Film>
+
+@{
+    ViewData["Title"] = "Admin: All Films";
+    Layout = "_Layout"; 
+}
+
+<div class="container mt-5">
+    <h1 class="mb-4">Film Administration</h1>
+
+    @if (TempData["message"] != null)
+    {
+        <div class="alert alert-success">@TempData["message"]</div>
+    }
+
+    <div class="text-end mb-3">
+        <a asp-action="EditFilm" asp-route-filmId="0" class="btn btn-primary">Create New Film</a>
+        <a asp-action="Screenings" class="btn btn-secondary">Manage Screenings</a>
+    </div>
+
+    <table class="table table-hover table-striped shadow-sm">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Genre</th>
+                <th>Price</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var f in Model)
+            {
+                <tr>
+                    <td>@f.FilmID</td>
+                    <td>@f.Title</td>
+                    <td>@f.Genre</td>
+                    <td>@f.TicketPrice.ToString("c")</td>
+                    <td>
+                        <a asp-action="EditFilm" asp-route-filmId="@f.FilmID" class="btn btn-sm btn-warning">Edit</a>
+                        <a asp-action="FilmDetails" asp-route-id="@f.FilmID" class="btn btn-sm btn-info">Details</a>
+                        <form asp-action="DeleteFilm" method="post" class="d-inline">
+                            <input type="hidden" name="filmId" value="@f.FilmID" />
+                            <button type="submit" class="btn btn-sm btn-danger"
+                                    onclick="return confirm('Are you sure you want to delete film: @f.Title?');">
+                                Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

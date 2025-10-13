@@ -1,0 +1,54 @@
+﻿@model AbsoluteCinema.Models.Film
+
+@{
+    ViewData["Title"] = Model.Title + " Details";
+    Layout = "_Layout";
+}
+
+<div class="container mt-5">
+    <div class="card shadow-lg">
+        <div class="card-header bg-primary text-white">
+            <h2 class="mb-0">@Model.Title Details</h2>
+        </div>
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-3">Film ID:</dt>
+                <dd class="col-sm-9">@Model.FilmID</dd>
+
+                <dt class="col-sm-3">Description:</dt>
+                <dd class="col-sm-9">@Model.Description</dd>
+
+                <dt class="col-sm-3">Director:</dt>
+                <dd class="col-sm-9">@Model.Director</dd>
+
+                <dt class="col-sm-3">Release Year:</dt>
+                <dd class="col-sm-9">@Model.ReleaseYear</dd>
+
+                <dt class="col-sm-3">Ticket Price:</dt>
+                <dd class="col-sm-9">@Model.TicketPrice.ToString("c")</dd>
+            </dl>
+
+            <h4 class="mt-4">Upcoming Screenings</h4>
+            @if (Model.Screenings != null && Model.Screenings.Any())
+            {
+                <ul class="list-group">
+                    @foreach (var s in Model.Screenings.OrderBy(s => s.StartTime))
+                    {
+                        <li class="list-group-item">
+                            Hall @s.CinemaHall:
+                            @(s.StartTime.HasValue? s.StartTime.Value.ToString("yyyy-MM-dd HH:mm") : "N/A")
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <p>No screenings scheduled yet.</p>
+            }
+        </div>
+        <div class="card-footer text-center">
+            <a asp-action="EditFilm" asp-route-filmId="@Model.FilmID" class="btn btn-warning">Edit Film</a>
+            <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+        </div>
+    </div>
+</div>

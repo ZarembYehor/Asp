@@ -1,0 +1,60 @@
+﻿@model IEnumerable<AbsoluteCinema.Models.Screening>
+
+@{
+    ViewData["Title"] = "Admin: All Screenings";
+    Layout = "_Layout";
+}
+
+<div class="container mt-5">
+    <h1 class="mb-4">Screening Administration</h1>
+
+    @if (TempData["message"] != null)
+    {
+        <div class="alert alert-success">@TempData["message"]</div>
+    }
+
+    <div class="text-end mb-3">
+        <a asp-action="EditScreening" asp-route-screeningId="0" class="btn btn-primary">Create New Screening</a>
+        <a asp-action="Index" class="btn btn-secondary">Manage Films</a>
+    </div>
+
+    <table class="table table-hover table-striped shadow-sm">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Film Title</th>
+                <th>Hall</th>
+                <th>Start Time</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var s in Model)
+            {
+                <tr>
+                    <td>@s.ScreeningID</td>
+
+                    <td>@(s.Film?.Title ?? "N/A")</td>
+
+                    <td>@s.CinemaHall</td>
+
+                    <td>
+                        @(s.StartTime.HasValue? s.StartTime.Value.ToString("yyyy-MM-dd HH:mm") : "N/A")
+                    </td>
+
+                    <td>
+                        <a asp-action="EditScreening" asp-route-screeningId="@s.ScreeningID" class="btn btn-sm btn-warning">Edit</a>
+                        <a asp-action="ScreeningDetails" asp-route-id="@s.ScreeningID" class="btn btn-sm btn-info">Details</a>
+                        <form asp-action="DeleteScreening" method="post" class="d-inline">
+                            <input type="hidden" name="screeningId" value="@s.ScreeningID" />
+                            <button type="submit" class="btn btn-sm btn-danger"
+                                    onclick="return confirm('Are you sure you want to delete screening ID @s.ScreeningID?');">
+                                Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

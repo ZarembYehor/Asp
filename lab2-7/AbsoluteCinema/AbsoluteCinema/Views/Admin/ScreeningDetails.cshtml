@@ -1,0 +1,35 @@
+﻿@model AbsoluteCinema.Models.Screening
+
+@{
+    ViewData["Title"] = $"Screening {Model.ScreeningID} Details";
+    Layout = "_Layout";
+}
+
+<div class="container mt-5">
+    <div class="card shadow-lg">
+        <div class="card-header bg-primary text-white">
+            <h2 class="mb-0">Screening Details (ID: @Model.ScreeningID)</h2>
+        </div>
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-3">Film Title:</dt>
+                <dd class="col-sm-9">@(Model.Film?.Title ?? "N/A")</dd>
+
+                <dt class="col-sm-3">Film ID:</dt>
+                <dd class="col-sm-9">@(Model.FilmID.HasValue? Model.FilmID.Value.ToString() : "N/A")</dd>
+
+                <dt class="col-sm-3">Start Time:</dt>
+                <dd class="col-sm-9">
+                    @(Model.StartTime.HasValue? Model.StartTime.Value.ToString("yyyy-MM-dd HH:mm:ss") : "N/A")
+                </dd>
+
+                <dt class="col-sm-3">Cinema Hall:</dt>
+                <dd class="col-sm-9">@Model.CinemaHall</dd>
+            </dl>
+        </div>
+        <div class="card-footer text-center">
+            <a asp-action="EditScreening" asp-route-screeningId="@Model.ScreeningID" class="btn btn-warning">Edit Screening</a>
+            <a asp-action="Screenings" class="btn btn-secondary">Back to List</a>
+        </div>
+    </div>
+</div>

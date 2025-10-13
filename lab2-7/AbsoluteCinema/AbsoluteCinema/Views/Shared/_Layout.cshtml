@@ -41,6 +41,24 @@
                                 About
                             </a>
                         </li>
+
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle fw-bold text-info" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-tools me-1"></i> Admin
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdown">
+                                <li>
+                                    <a class="dropdown-item" asp-controller="Admin" asp-action="Index">
+                                        <i class="bi bi-camera-reels me-1"></i> Manage Films (CRUD)
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" asp-controller="Admin" asp-action="Screenings">
+                                        <i class="bi bi-clock-history me-1"></i> Manage Screenings
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
                     </ul>
 
                 </div>

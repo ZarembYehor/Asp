@@ -1,7 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using static System.Net.WebRequestMethods;
+using System.Linq;
+using Microsoft.AspNetCore.Builder; 
 
 namespace AbsoluteCinema.Models
 {
@@ -92,6 +93,40 @@ namespace AbsoluteCinema.Models
                     }
                 );
 
+                context.SaveChanges();
+            }
+
+            if (!context.Screenings.Any())
+            {
+                var inception = context.Films.First(f => f.Title == "Inception");
+                var interstellar = context.Films.First(f => f.Title == "Interstellar");
+
+                context.Screenings.AddRange(
+                    new Screening
+                    {
+                        FilmID = inception.FilmID,
+                        StartTime = new DateTime(2025, 11, 1, 18, 0, 0),
+                        CinemaHall = 1
+                    },
+                    new Screening
+                    {
+                        FilmID = inception.FilmID,
+                        StartTime = new DateTime(2025, 11, 2, 21, 30, 0),
+                        CinemaHall = 3
+                    },
+                    new Screening
+                    {
+                        FilmID = interstellar.FilmID,
+                        StartTime = new DateTime(2025, 11, 1, 15, 0, 0),
+                        CinemaHall = 2
+                    },
+                    new Screening
+                    {
+                        FilmID = interstellar.FilmID,
+                        StartTime = new DateTime(2025, 11, 3, 19, 0, 0),
+                        CinemaHall = 2
+                    }
+                );
                 context.SaveChanges();
             }
         }
