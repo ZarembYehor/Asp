@@ -1,0 +1,42 @@
+﻿@model AbsoluteCinema.Models.ViewModels.RegisterModel
+
+@{
+    ViewData["Title"] = "Register";
+    Layout = "_Layout";
+}
+
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <h2 class="mb-4 text-center">User Registration</h2>
+
+            <div class="alert alert-danger" asp-validation-summary="ModelOnly"></div>
+
+            <form asp-action="Register" method="post">
+
+                <div class="mb-3">
+                    <label asp-for="Email" class="form-label"></label>
+                    <input asp-for="Email" class="form-control" />
+                    <span asp-validation-for="Email" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Password" class="form-label"></label>
+                    <input asp-for="Password" class="form-control" />
+                    <span asp-validation-for="Password" class="text-danger"></span>
+                    <small class="text-muted">Пароль має містити: мін. 8 символів, велику літеру, цифру.</small>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="ConfirmPassword" class="form-label"></label>
+                    <input asp-for="ConfirmPassword" class="form-control" />
+                    <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+                </div>
+
+                <div class="d-grid">
+                    <button class="btn btn-success btn-lg" type="submit">Register</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
