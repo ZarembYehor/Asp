@@ -1,7 +1,10 @@
 ﻿@page "/book"
 @using BlazorApp1.Models
+@using Microsoft.AspNetCore.SignalR.Client
+@using System.Net.Http.Json
 @inject HttpClient Http
 @inject IJSRuntime JsRuntime
+@inject NavigationManager Navigation
 
 <PageTitle>Бронювання місць</PageTitle>
 
@@ -15,6 +18,16 @@
         Ця сторінка доступна без авторизації.
     </div>
 
+    <div class="row justify-content-center mb-3">
+        <div class="col-lg-8 col-md-7 text-center">
+            <div class="btn-group" role="group">
+                <button class="btn btn-outline-primary" @onclick="() => SetUnlockMode(false)" disabled="@(unlockMode == false)">Звичайний режим</button>
+                <button class="btn btn-outline-warning" @onclick="() => SetUnlockMode(true)" disabled="@(unlockMode == true)">Режим: розблокувати бронь</button>
+            </div>
+            <div class="mt-2 small text-muted">У режимі розблокування ви можете вибирати червоні (заброньовані) місця для скасування броні.</div>
+        </div>
+    </div>
+
     <div class="row justify-content-center">
         <div class="col-lg-8 col-md-7 mb-4">
             <div class="card shadow-lg border-0 rounded-4">
@@ -22,11 +35,10 @@
                     🎬 Виберіть місця
                 </div>
                 <div class="card-body text-center p-4">
-
                     <h5 class="text-secondary mb-3">Екран</h5>
                     <div class="screen-bar mx-auto mb-4"></div>
 
-                    @if (bookedSeats == null)
+                    @if (bookedSeats == null || lockedSeats == null)
                     {
                         <div class="text-muted">Завантаження інформації про місця...</div>
                     }
@@ -40,12 +52,25 @@
                                 {
                                     var seat = new Seat { Row = row, Number = number };
                                     var isBooked = bookedSeats.Any(s => s.Row == row && s.Number == number);
+                                    var isLocked = lockedSeats.Any(s => s.Row == row && s.Number == number);
                                     var isSelected = selectedSeats.Any(s => s.Row == row && s.Number == number);
+
+                                    bool disabled;
+                                    if (unlockMode)
+                                    {
+                                        disabled = isLocked && !isSelected; 
+                                    }
+                                    else
+                                    {
+                                        disabled = isBooked || (isLocked && !isSelected);
+                                    }
+
+                                    var cssClass = isBooked ? "booked" : isLocked ? "locked" : isSelected ? "selected" : "";
 
                                     <button type="button"
                                             @onclick="() => ToggleSeat(seat)"
-                                            disabled="@isBooked"
-                                            class="seat-btn @(isBooked ? "booked" : isSelected ? "selected" : "")">
+                                            disabled="@disabled"
+                                            class="seat-btn @cssClass">
                                         @number
                                     </button>
                                 }
@@ -73,10 +98,26 @@
                             }
                         </ul>
 
-                        <button class="btn btn-success w-100 btn-lg rounded-pill shadow-sm"
-                                @onclick="ConfirmBooking">
-                            <i class="oi oi-check me-2"></i> Підтвердити (@selectedSeats.Count)
-                        </button>
+                        <div class="d-grid gap-2">
+                            @if (!unlockMode)
+                            {
+                                <button class="btn btn-success w-100 btn-lg rounded-pill shadow-sm" @onclick="ConfirmBooking">
+                                    ✅ Підтвердити (@selectedSeats.Count)
+                                </button>
+                                <button class="btn btn-secondary w-100 btn-lg rounded-pill shadow-sm" @onclick="CancelSelection">
+                                    🔓 Скасувати вибір
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-danger w-100 btn-lg rounded-pill shadow-sm" @onclick="ConfirmUnlockBooked">
+                                    🔥 Підтвердити розблокування (@selectedSeats.Count)
+                                </button>
+                                <button class="btn btn-secondary w-100 btn-lg rounded-pill shadow-sm" @onclick="CancelSelection">
+                                    ✖ Відмінити вибір
+                                </button>
+                            }
+                        </div>
                     }
                     else
                     {
@@ -89,6 +130,16 @@
                             @bookingMessage
                         </div>
                     }
+
+                    <hr />
+
+                    <div class="small text-muted">
+                        <strong>Легенда:</strong>
+                        <div><span class="legend-box free"></span> Вільне</div>
+                        <div><span class="legend-box selected"></span> Обрані вами</div>
+                        <div><span class="legend-box locked"></span> Тимчасово заблоковане</div>
+                        <div><span class="legend-box booked"></span> Остаточно заброньоване</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -97,9 +148,15 @@
 
 @code {
     private List<Seat>? bookedSeats;
+    private List<Seat> lockedSeats = new();
     private List<Seat> selectedSeats = new();
     private string bookingMessage = string.Empty;
     private bool bookingSuccess = false;
+    private HubConnection? hubConnection;
+    private bool unlockMode = false; 
+
+    private readonly string apiBaseUrl = "https://localhost:5001";
+    private readonly string hubUrl = "https://localhost:5001/bookinghub";
 
     public class Seat
     {
@@ -114,9 +171,23 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await StartSignalRConnection();
+        await LoadBookedSeats(); 
+    }
+
+    private void SetUnlockMode(bool value)
+    {
+        unlockMode = value;
+        selectedSeats.Clear();
+        StateHasChanged();
+    }
+
+    private async Task LoadBookedSeats()
+    {
         try
         {
-            bookedSeats = await Http.GetFromJsonAsync<List<Seat>>("api/Booking/Seats");
+            bookedSeats = await Http.GetFromJsonAsync<List<Seat>>($"{apiBaseUrl}/api/Booking/Seats");
+            if (bookedSeats == null) bookedSeats = new List<Seat>();
         }
         catch
         {
@@ -124,37 +195,196 @@
         }
     }
 
-    private void ToggleSeat(Seat seat)
+    private async Task StartSignalRConnection()
     {
-        bookingMessage = string.Empty;
-        var existing = selectedSeats.FirstOrDefault(s => s.Row == seat.Row && s.Number == seat.Number);
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(hubUrl)
+            .WithAutomaticReconnect()
+            .Build();
 
-        if (existing != null)
-            selectedSeats.Remove(existing);
+        hubConnection.On<List<Seat>>("SeatsUpdated", (updatedBooked) =>
+        {
+            bookedSeats = updatedBooked;
+            selectedSeats.RemoveAll(sel => bookedSeats.Any(b => b.Equals(sel)) && !unlockMode);
+            InvokeAsync(StateHasChanged);
+        });
+
+        hubConnection.On<List<Seat>>("SeatsLocked", (updatedLocked) =>
+        {
+            lockedSeats = updatedLocked;
+            selectedSeats.RemoveAll(sel => lockedSeats.Any(l => l.Equals(sel)) && !unlockMode);
+            InvokeAsync(StateHasChanged);
+        });
+
+        hubConnection.On<List<Seat>>("SeatsUnlocked", (updatedLocked) =>
+        {
+            lockedSeats = updatedLocked;
+            InvokeAsync(StateHasChanged);
+        });
+
+        try
+        {
+            await hubConnection.StartAsync();
+            Console.WriteLine("SignalR connected");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"SignalR error: {ex.Message}");
+        }
+    }
+
+    private async Task ToggleSeat(Seat seat)
+    {
+        bool isBooked = bookedSeats.Any(s => s.Equals(seat));
+        bool isLocked = lockedSeats.Any(s => s.Equals(seat));
+        bool alreadySelected = selectedSeats.Any(s => s.Equals(seat));
+
+        if (!unlockMode)
+        {
+            if (isBooked) return; 
+            if (isLocked && !alreadySelected) return;
+
+            if (alreadySelected)
+                selectedSeats.RemoveAll(s => s.Equals(seat));
+            else
+                selectedSeats.Add(seat);
+
+            if (hubConnection is not null)
+            {
+                try
+                {
+                    await hubConnection.InvokeAsync("LockSeats", selectedSeats);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"LockSeats invoke error: {ex.Message}");
+                }
+            }
+        }
         else
-            selectedSeats.Add(seat);
+        {
+            if (!alreadySelected)
+                selectedSeats.Add(seat);
+            else
+                selectedSeats.RemoveAll(s => s.Equals(seat));
+        }
+
+        bookingMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task CancelSelection()
+    {
+        if (!selectedSeats.Any()) return;
+
+        if (!unlockMode)
+        {
+            if (hubConnection is not null)
+            {
+                try
+                {
+                    await hubConnection.InvokeAsync("UnlockSeats", selectedSeats);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"UnlockSeats invoke error: {ex.Message}");
+                }
+            }
+
+            selectedSeats.Clear();
+            bookingMessage = "🔓 Вибір скасовано (тимчасові блокування знято).";
+            bookingSuccess = true;
+        }
+        else
+        {
+            selectedSeats.Clear();
+            bookingMessage = "Вибір розблокування скасовано.";
+            bookingSuccess = false;
+        }
+
+        StateHasChanged();
     }
 
     private async Task ConfirmBooking()
     {
-        bookingMessage = "Обробка...";
-        var response = await Http.PostAsJsonAsync("api/Booking/Confirm", selectedSeats);
+        if (!selectedSeats.Any()) return;
 
-        if (response.IsSuccessStatusCode)
+        bookingMessage = "Обробка...";
+        try
         {
-            bookingSuccess = true;
-            bookingMessage = "✅ Бронювання успішно підтверджено!";
-            await OnInitializedAsync();
-            selectedSeats.Clear();
+            var response = await Http.PostAsJsonAsync($"{apiBaseUrl}/api/Booking/Confirm", selectedSeats);
+
+            if (response.IsSuccessStatusCode)
+            {
+                bookingSuccess = true;
+                bookingMessage = "✅ Бронювання успішно підтверджено!";
+                selectedSeats.Clear();
+            }
+            else
+            {
+                bookingSuccess = false;
+                var text = await response.Content.ReadAsStringAsync();
+                bookingMessage = $"❌ Помилка бронювання: {text}";
+            }
         }
-        else
+        catch (Exception ex)
         {
             bookingSuccess = false;
-            bookingMessage = $"❌ Помилка бронювання: {await response.Content.ReadAsStringAsync()}";
+            bookingMessage = $"❌ Помилка: {ex.Message}";
         }
+
+        StateHasChanged();
+    }
+
+    private async Task ConfirmUnlockBooked()
+    {
+        if (!selectedSeats.Any()) return;
+
+        bookingMessage = "Обробка розблокування...";
+        try
+        {
+            var response = await Http.PostAsJsonAsync($"{apiBaseUrl}/api/Booking/Cancel", selectedSeats);
+
+            if (response.IsSuccessStatusCode)
+            {
+                bookingSuccess = true;
+                bookingMessage = "✅ Розблокування успішне — місця знову вільні!";
+                selectedSeats.Clear();
+                await LoadBookedSeats();
+            }
+            else
+            {
+                bookingSuccess = false;
+                var text = await response.Content.ReadAsStringAsync();
+                bookingMessage = $"❌ Не вдалося розблокувати: {text}";
+            }
+        }
+        catch (Exception ex)
+        {
+            bookingSuccess = false;
+            bookingMessage = $"❌ Помилка: {ex.Message}";
+        }
+
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null && selectedSeats.Any() && !unlockMode)
+        {
+            try
+            {
+                await hubConnection.InvokeAsync("UnlockSeats", selectedSeats);
+            }
+            catch
+            {
+            }
+        }
+
+        if (hubConnection is not null)
+            await hubConnection.DisposeAsync();
     }
 }
-
 <style>
     .book-container {
         background: linear-gradient(135deg, #f9fafb 0%, #eef2ff 100%);
@@ -197,18 +427,24 @@
         font-weight: 500;
         transition: all 0.2s ease-in-out;
         margin: 0 4px;
+        cursor: pointer;
     }
 
         .seat-btn:hover {
-            background-color: #0d6efd;
-            color: white;
-            transform: scale(1.1);
+            transform: scale(1.06);
         }
 
         .seat-btn.booked {
             background-color: #dc3545;
             color: white;
             border-color: #dc3545;
+            cursor: pointer;
+        }
+
+        .seat-btn.locked {
+            background-color: orange;
+            color: white;
+            border-color: orange;
             cursor: not-allowed;
         }
 
@@ -227,6 +463,32 @@
     }
 
         .btn:hover {
-            transform: scale(1.05);
+            transform: scale(1.02);
+        }
+
+    .legend-box {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        margin-right: 8px;
+        vertical-align: middle;
+        border-radius: 3px;
+        border: 1px solid #ccc;
+    }
+
+        .legend-box.free {
+            background: #fff;
+        }
+
+        .legend-box.selected {
+            background: #ffc107;
+        }
+
+        .legend-box.locked {
+            background: orange;
+        }
+
+        .legend-box.booked {
+            background: #dc3545;
         }
 </style>
