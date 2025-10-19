@@ -1,0 +1,124 @@
+﻿@page "/films/{Id:long}"
+@using BlazorApp1.Models
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>Деталі фільму</PageTitle>
+
+@if (film == null)
+{
+    <p class="text-muted"><em>Завантаження деталей фільму...</em></p>
+}
+else
+{
+    <div class="film-details-container py-5">
+        <h2 class="fw-bold text-primary mb-4">🎬 @film.Title (@film.ReleaseYear)</h2>
+
+        <div class="row">
+            <div class="col-md-4 text-center">
+                <img src="@film.PosterUrl" alt="Постер фільму"
+                     class="img-fluid rounded shadow-lg film-poster"
+                     onerror="this.onerror=null;this.src='https://via.placeholder.com/300x450?text=No+Poster';" />
+
+                <div class="mt-3">
+                    <a href="/films" class="btn btn-outline-secondary shadow-sm rounded-pill">
+                        <span class="oi oi-arrow-left me-2"></span> Назад до списку
+                    </a>
+                </div>
+            </div>
+
+            <div class="col-md-8 mt-4 mt-md-0">
+                <div class="card shadow-lg film-card">
+                    <div class="card-body">
+                        <p><strong>Режисер:</strong> @film.Director</p>
+                        <p><strong>Жанр:</strong> @film.Genre</p>
+                        <p><strong>Тривалість:</strong> @film.DurationMinutes хв.</p>
+                        <p><strong>Ціна квитка:</strong> @film.TicketPrice.ToString("C")</p>
+                        <p><strong>Активний:</strong> @(film.IsActive ? "Так" : "Ні")</p>
+                        <p class="mt-4"><strong>Опис:</strong> @film.Description</p>
+
+                        <AuthorizeView>
+                            <Authorized>
+                                <a href="/films/edit/@film.FilmID" class="btn btn-warning mt-3 shadow-sm rounded-pill">
+                                    <span class="oi oi-pencil me-2"></span> Редагувати профіль
+                                </a>
+                            </Authorized>
+                        </AuthorizeView>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public long Id { get; set; }
+
+    private Film? film;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            film = await Http.GetFromJsonAsync<Film>($"api/Films/{Id}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching film details: {ex.Message}");
+            Navigation.NavigateTo("/films");
+        }
+    }
+}
+
+<style>
+    .film-details-container {
+        background: linear-gradient(135deg, #f9fafb 0%, #eef2ff 100%);
+        min-height: calc(100vh - 80px);
+        padding-bottom: 40px;
+    }
+
+        .film-details-container h2 {
+            background: linear-gradient(90deg, #0d6efd, #6610f2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+    .film-poster {
+        max-width: 100%;
+        border-radius: 12px;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+        transition: transform 0.2s ease-in-out;
+    }
+
+        .film-poster:hover {
+            transform: scale(1.03);
+        }
+
+    .film-card {
+        border-radius: 16px;
+        background-color: white;
+        padding: 20px;
+        transition: box-shadow 0.2s ease-in-out;
+    }
+
+        .film-card:hover {
+            box-shadow: 0 12px 24px rgba(0,0,0,0.2);
+        }
+
+    .btn {
+        transition: all 0.2s ease-in-out;
+    }
+
+        .btn:hover {
+            transform: scale(1.05);
+        }
+
+    .rounded-pill {
+        border-radius: 50px !important;
+    }
+
+    .shadow-sm {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.08) !important;
+    }
+</style>

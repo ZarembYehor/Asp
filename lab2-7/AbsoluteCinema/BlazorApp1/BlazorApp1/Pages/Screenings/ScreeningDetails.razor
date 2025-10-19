@@ -1,0 +1,67 @@
+﻿@page "/screenings/{Id:long}"
+@using BlazorApp1.Models
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>Деталі сеансу</PageTitle>
+
+@if (screening == null)
+{
+    <p><em>Завантаження деталей сеансу...</em></p>
+}
+else
+{
+    <h3 class="mb-4 text-info">Профіль сеансу: Зал @screening.CinemaHall</h3>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <p><strong>ID Сеансу:</strong> @screening.ScreeningID</p>
+            <p><strong>Зал кінотеатру:</strong> <span class="fw-bold text-primary">@screening.CinemaHall</span></p>
+            <p><strong>Час початку:</strong> @(screening.StartTime?.ToString("dd MMMM yyyy, HH:mm"))</p>
+
+            <h5 class="mt-4 border-top pt-3">Інформація про фільм</h5>
+            @if (screening.Film != null)
+            {
+                <p><strong>Назва фільму:</strong> <a href="/films/@screening.Film.FilmID">@screening.Film.Title</a></p>
+                <p><strong>Режисер:</strong> @screening.Film.Director</p>
+                <p><strong>Жанр:</strong> @screening.Film.Genre</p>
+            }
+            else
+            {
+                <p class="text-danger">Дані про фільм відсутні (FilmID: @screening.FilmID).</p>
+            }
+
+            <a href="/screenings" class="btn btn-outline-secondary mt-3">
+                <span class="oi oi-arrow-left me-2"></span> Назад до сеансів
+            </a>
+
+            <AuthorizeView>
+                <Authorized>
+                    <a href="/screenings/edit/@screening.ScreeningID" class="btn btn-warning mt-3 ms-2">
+                        <span class="oi oi-pencil me-2"></span> Редагувати сеанс
+                    </a>
+                </Authorized>
+            </AuthorizeView>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public long Id { get; set; }
+
+    private Screening? screening;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            screening = await Http.GetFromJsonAsync<Screening>($"api/Screenings/{Id}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching screening details: {ex.Message}");
+            Navigation.NavigateTo("/screenings");
+        }
+    }
+}

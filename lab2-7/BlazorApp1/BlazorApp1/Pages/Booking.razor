@@ -1,0 +1,232 @@
+﻿@page "/book"
+@using BlazorApp1.Models
+@inject HttpClient Http
+@inject IJSRuntime JsRuntime
+
+<PageTitle>Бронювання місць</PageTitle>
+
+<div class="book-container py-5">
+    <div class="text-center mb-5">
+        <h1 class="fw-bold text-gradient mb-2">🎟️ Бронювання місць</h1>
+        <p class="text-muted lead">Оберіть бажані місця у залі кінотеатру</p>
+    </div>
+
+    <div class="alert alert-info shadow-sm text-center mb-4">
+        Ця сторінка доступна без авторизації.
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-7 mb-4">
+            <div class="card shadow-lg border-0 rounded-4">
+                <div class="card-header bg-success text-white text-center fw-semibold rounded-top-4">
+                    🎬 Виберіть місця
+                </div>
+                <div class="card-body text-center p-4">
+
+                    <h5 class="text-secondary mb-3">Екран</h5>
+                    <div class="screen-bar mx-auto mb-4"></div>
+
+                    @if (bookedSeats == null)
+                    {
+                        <div class="text-muted">Завантаження інформації про місця...</div>
+                    }
+                    else
+                    {
+                        @for (int row = 1; row <= 4; row++)
+                        {
+                            <div class="seat-row mb-3">
+                                <span class="row-label fw-semibold text-muted me-3">Ряд @row:</span>
+                                @for (int number = 1; number <= 10; number++)
+                                {
+                                    var seat = new Seat { Row = row, Number = number };
+                                    var isBooked = bookedSeats.Any(s => s.Row == row && s.Number == number);
+                                    var isSelected = selectedSeats.Any(s => s.Row == row && s.Number == number);
+
+                                    <button type="button"
+                                            @onclick="() => ToggleSeat(seat)"
+                                            disabled="@isBooked"
+                                            class="seat-btn @(isBooked ? "booked" : isSelected ? "selected" : "")">
+                                        @number
+                                    </button>
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-5">
+            <div class="card shadow-lg border-0 rounded-4 sticky-top" style="top: 90px;">
+                <div class="card-header bg-info text-white fw-semibold text-center rounded-top-4">
+                    🧾 Ваш вибір
+                </div>
+                <div class="card-body p-4">
+                    @if (selectedSeats.Any())
+                    {
+                        <ul class="list-group mb-4">
+                            @foreach (var seat in selectedSeats.OrderBy(s => s.Row).ThenBy(s => s.Number))
+                            {
+                                <li class="list-group-item py-2 px-3 border-0 shadow-sm mb-2 rounded-3">
+                                    🎫 Ряд @seat.Row, Місце @seat.Number
+                                </li>
+                            }
+                        </ul>
+
+                        <button class="btn btn-success w-100 btn-lg rounded-pill shadow-sm"
+                                @onclick="ConfirmBooking">
+                            <i class="oi oi-check me-2"></i> Підтвердити (@selectedSeats.Count)
+                        </button>
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center">Будь ласка, оберіть місце.</p>
+                    }
+
+                    @if (!string.IsNullOrEmpty(bookingMessage))
+                    {
+                        <div class="alert @(bookingSuccess ? "alert-success" : "alert-danger") mt-4 text-center shadow-sm">
+                            @bookingMessage
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Seat>? bookedSeats;
+    private List<Seat> selectedSeats = new();
+    private string bookingMessage = string.Empty;
+    private bool bookingSuccess = false;
+
+    public class Seat
+    {
+        public int Row { get; set; }
+        public int Number { get; set; }
+
+        public override bool Equals(object? obj) =>
+            obj is Seat other && Row == other.Row && Number == other.Number;
+
+        public override int GetHashCode() => HashCode.Combine(Row, Number);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            bookedSeats = await Http.GetFromJsonAsync<List<Seat>>("api/Booking/Seats");
+        }
+        catch
+        {
+            bookedSeats = new List<Seat>();
+        }
+    }
+
+    private void ToggleSeat(Seat seat)
+    {
+        bookingMessage = string.Empty;
+        var existing = selectedSeats.FirstOrDefault(s => s.Row == seat.Row && s.Number == seat.Number);
+
+        if (existing != null)
+            selectedSeats.Remove(existing);
+        else
+            selectedSeats.Add(seat);
+    }
+
+    private async Task ConfirmBooking()
+    {
+        bookingMessage = "Обробка...";
+        var response = await Http.PostAsJsonAsync("api/Booking/Confirm", selectedSeats);
+
+        if (response.IsSuccessStatusCode)
+        {
+            bookingSuccess = true;
+            bookingMessage = "✅ Бронювання успішно підтверджено!";
+            await OnInitializedAsync();
+            selectedSeats.Clear();
+        }
+        else
+        {
+            bookingSuccess = false;
+            bookingMessage = $"❌ Помилка бронювання: {await response.Content.ReadAsStringAsync()}";
+        }
+    }
+}
+
+<style>
+    .book-container {
+        background: linear-gradient(135deg, #f9fafb 0%, #eef2ff 100%);
+        min-height: calc(100vh - 80px);
+    }
+
+    .text-gradient {
+        background: linear-gradient(90deg, #0d6efd, #6610f2);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .screen-bar {
+        width: 80%;
+        height: 8px;
+        background: linear-gradient(90deg, #007bff, #00c6ff);
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
+    }
+
+    .seat-row {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .row-label {
+        min-width: 70px;
+        text-align: right;
+    }
+
+    .seat-btn {
+        width: 40px;
+        height: 40px;
+        border: 2px solid #0d6efd;
+        border-radius: 8px;
+        background-color: #fff;
+        color: #0d6efd;
+        font-weight: 500;
+        transition: all 0.2s ease-in-out;
+        margin: 0 4px;
+    }
+
+        .seat-btn:hover {
+            background-color: #0d6efd;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .seat-btn.booked {
+            background-color: #dc3545;
+            color: white;
+            border-color: #dc3545;
+            cursor: not-allowed;
+        }
+
+        .seat-btn.selected {
+            background-color: #ffc107;
+            border-color: #ffc107;
+            color: #212529;
+        }
+
+    .list-group-item {
+        background-color: #f8f9fa;
+    }
+
+    .btn {
+        transition: all 0.2s ease-in-out;
+    }
+
+        .btn:hover {
+            transform: scale(1.05);
+        }
+</style>

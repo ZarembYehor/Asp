@@ -1,0 +1,181 @@
+﻿@page "/profile"
+@using BlazorApp1.Models
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@attribute [Authorize]
+
+<PageTitle>Мій Профіль</PageTitle>
+
+<div class="profile-container py-5">
+    <div class="text-center mb-5">
+        <h1 class="fw-bold text-warning mb-2">👤 Мій Профіль</h1>
+        <p class="text-muted lead">Тут ви можете оновити свій пароль</p>
+    </div>
+
+    @if (profileModel == null)
+    {
+        <p class="text-center text-muted"><em>Завантаження даних профілю...</em></p>
+    }
+    else
+    {
+        <div class="row justify-content-center">
+            <div class="col-lg-6">
+
+                <div class="card shadow-lg border-0 mb-4 rounded-4">
+                    <div class="card-header bg-warning text-dark fw-semibold rounded-top-4">
+                        Поточні дані
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Email:</strong> <span class="fw-bold text-primary">@profileModel.Email</span></p>
+                        <p class="small text-muted">Для зміни пароля заповніть форму нижче.</p>
+                    </div>
+                </div>
+
+                <div class="card shadow-lg border-0 rounded-4">
+                    <div class="card-header bg-info text-white fw-semibold rounded-top-4">
+                        Зміна пароля
+                    </div>
+                    <div class="card-body p-4">
+
+                        <EditForm Model="@profileModel" OnValidSubmit="HandleProfileUpdate">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="alert alert-danger p-2 rounded-3" />
+
+                            <div class="form-group mb-3">
+                                <label class="form-label">Email</label>
+                                <InputText @bind-Value="profileModel.Email" class="form-control shadow-sm" disabled />
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label class="form-label">Новий пароль</label>
+                                <InputText @bind-Value="profileModel.NewPassword" type="password" class="form-control shadow-sm" placeholder="Новий пароль" />
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label class="form-label">Підтвердіть новий пароль</label>
+                                <InputText @bind-Value="profileModel.ConfirmNewPassword" type="password" class="form-control shadow-sm" placeholder="Повторіть пароль" />
+                            </div>
+
+                            <div class="form-group mb-4">
+                                <label class="form-label fw-bold text-danger">Поточний пароль (обов'язково)</label>
+                                <InputText @bind-Value="profileModel.CurrentPassword" type="password" class="form-control shadow-sm" placeholder="Поточний пароль" />
+                            </div>
+
+                            <button type="submit" class="btn btn-success w-100 shadow-sm rounded-pill">
+                                Оновити пароль
+                            </button>
+                        </EditForm>
+
+                        @if (!string.IsNullOrEmpty(message))
+                        {
+                            <div class="alert @(isSuccess ? "alert-success" : "alert-danger") mt-3 shadow-sm text-center rounded-3">
+                                @message
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private ProfileModel? profileModel;
+    private bool isSuccess = false;
+    private string message = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProfile();
+    }
+
+    private async Task LoadProfile()
+    {
+        try
+        {
+            var userProfile = await Http.GetFromJsonAsync<UserProfile>("api/Account/Profile");
+            if (userProfile != null)
+            {
+                profileModel = new ProfileModel { Email = userProfile.Email };
+            }
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            Navigation.NavigateTo("/logout", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            message = $"Помилка завантаження профілю: {ex.Message}";
+        }
+    }
+
+    private async Task HandleProfileUpdate()
+    {
+        message = string.Empty;
+
+        var response = await Http.PostAsJsonAsync("api/Account/UpdateProfile", profileModel);
+
+        if (response.IsSuccessStatusCode)
+        {
+            isSuccess = true;
+            message = "Пароль успішно оновлено! Необхідний повторний вхід.";
+
+            profileModel!.NewPassword = string.Empty;
+            profileModel!.ConfirmNewPassword = string.Empty;
+            profileModel!.CurrentPassword = string.Empty;
+        }
+        else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            Navigation.NavigateTo("/logout", forceLoad: true);
+        }
+        else
+        {
+            isSuccess = false;
+            message = $"Не вдалося оновити пароль. Перевірте поточний пароль. Деталі: {await response.Content.ReadAsStringAsync()}";
+        }
+    }
+}
+
+<style>
+    .profile-container {
+        background: linear-gradient(135deg, #f9fafb 0%, #eef2ff 100%);
+        min-height: calc(100vh - 80px);
+        padding-bottom: 40px;
+    }
+
+    h1 {
+        background: linear-gradient(90deg, #ffc107, #fd7e14);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .card {
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+    .form-control {
+        transition: all 0.2s ease-in-out;
+    }
+
+        .form-control:focus {
+            border-color: #0d6efd;
+            box-shadow: 0 0 8px rgba(13, 110, 253, 0.3);
+        }
+
+    .btn {
+        transition: all 0.2s ease-in-out;
+    }
+
+        .btn:hover {
+            transform: scale(1.03);
+        }
+
+    .alert {
+        font-size: 0.95rem;
+    }
+</style>

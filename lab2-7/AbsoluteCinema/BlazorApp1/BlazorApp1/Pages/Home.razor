@@ -1,0 +1,79 @@
+﻿@page "/"
+
+<PageTitle>Головна</PageTitle>
+
+<div class="home-container text-center py-5">
+    <div class="welcome-section mb-5">
+        <h1 class="display-4 fw-bold text-gradient mb-3">🎬 Ласкаво просимо!</h1>
+        <p class="lead text-muted">Система управління кінотеатром</p>
+    </div>
+
+    <div class="d-flex justify-content-center">
+        <div class="card shadow-lg border-0 rounded-4 p-4 home-card">
+            <div class="card-body">
+
+                <AuthorizeView>
+                    <Authorized>
+                        <h4 class="card-title text-success fw-semibold mb-3">
+                            ✅ Вхід успішний!
+                        </h4>
+                        <p class="card-text text-muted mb-4">
+                            Ви маєте повний доступ до всіх функцій адміністратора.
+                        </p>
+                        <a href="films" class="btn btn-lg btn-primary px-5 shadow-sm rounded-pill">
+                            <i class="oi oi-film me-2"></i> Керувати фільмами
+                        </a>
+                    </Authorized>
+
+                    <NotAuthorized>
+                        <h4 class="card-title text-danger fw-semibold mb-3">
+                            🔒 Доступ обмежений
+                        </h4>
+                        <p class="card-text text-muted mb-4">
+                            Будь ласка, увійдіть, щоб отримати доступ до адміністрування системи.
+                        </p>
+                        <a href="login" class="btn btn-lg btn-success px-5 shadow-sm rounded-pill">
+                            <i class="oi oi-account-login me-2"></i> Увійти
+                        </a>
+                    </NotAuthorized>
+                </AuthorizeView>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .home-container {
+        background: linear-gradient(135deg, #f9fafb 0%, #eef2ff 100%);
+        min-height: calc(100vh - 80px);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .text-gradient {
+        background: linear-gradient(90deg, #007bff, #6610f2);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .home-card {
+        max-width: 550px;
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+
+        .home-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+    .btn {
+        transition: all 0.2s ease-in-out;
+    }
+
+        .btn:hover {
+            transform: scale(1.05);
+        }
+</style>

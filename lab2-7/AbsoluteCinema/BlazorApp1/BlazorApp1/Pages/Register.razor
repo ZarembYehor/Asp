@@ -1,0 +1,77 @@
+﻿@page "/register"
+@using BlazorApp1.Models
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>Реєстрація</PageTitle>
+
+<div class="register-container d-flex align-items-center justify-content-center">
+    <div class="register-card">
+        <h2 class="text-center mb-4 text-glow">🎥 Створити обліковий запис</h2>
+
+        <EditForm Model="@registerModel" OnValidSubmit="HandleRegistration">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="alert alert-warning p-2 text-center" />
+
+            <div class="mb-3">
+                <label class="form-label text-light">Email</label>
+                <InputText @bind-Value="registerModel.Email" class="form-control neon-input" placeholder="Введіть електронну пошту" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label text-light">Пароль</label>
+                <InputText @bind-Value="registerModel.Password" type="password" class="form-control neon-input" placeholder="Пароль (мін. 8 символів)" />
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label text-light">Підтвердження паролю</label>
+                <InputText @bind-Value="registerModel.ConfirmPassword" type="password" class="form-control neon-input" placeholder="Повторіть пароль" />
+            </div>
+
+            <button type="submit" class="btn btn-register w-100 mt-2">
+                Зареєструватись
+            </button>
+        </EditForm>
+
+        @if (!string.IsNullOrEmpty(message))
+        {
+            <div class="alert @(isSuccess ? "alert-success" : "alert-danger") mt-3 text-center" role="alert">
+                @message
+            </div>
+        }
+
+        <div class="text-center mt-4">
+            <span class="text-secondary">Вже маєте акаунт?</span>
+            <a href="/login" class="text-warning ms-1 text-decoration-none fw-semibold hover-underline">
+                Увійти
+            </a>
+        </div>
+    </div>
+</div>
+
+@code {
+    private RegisterModel registerModel = new RegisterModel();
+    private bool isSuccess = false;
+    private string message = string.Empty;
+
+    private async Task HandleRegistration()
+    {
+        message = string.Empty;
+
+        var response = await Http.PostAsJsonAsync("api/Account/Register", registerModel);
+
+        if (response.IsSuccessStatusCode)
+        {
+            isSuccess = true;
+            message = "✅ Реєстрація успішна! Зараз відбудеться перехід...";
+            await Task.Delay(2000);
+            Navigation.NavigateTo("/login");
+        }
+        else
+        {
+            isSuccess = false;
+            var errorContent = await response.Content.ReadAsStringAsync();
+            message = $"❌ Помилка реєстрації: {errorContent}";
+        }
+    }
+}

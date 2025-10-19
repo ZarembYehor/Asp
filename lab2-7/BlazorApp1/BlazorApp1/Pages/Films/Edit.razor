@@ -1,0 +1,161 @@
+﻿@page "/films/create"
+@page "/films/edit/{Id:long}"
+@using BlazorApp1.Models
+@using Microsoft.AspNetCore.Authorization
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@attribute [Authorize]
+
+<h2 class="fw-bold text-primary mb-4">
+    @(Id.HasValue ? "Редагування" : "Створення") фільму
+</h2>
+
+<div class="card shadow-lg film-form-card">
+    <div class="card-body">
+        <EditForm Model="@film" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="alert alert-warning p-2" />
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold">Назва:</label>
+                    <InputText @bind-Value="film.Title" class="form-control form-control-lg" placeholder="Введіть назву фільму" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold">Режисер:</label>
+                    <InputText @bind-Value="film.Director" class="form-control form-control-lg" placeholder="Введіть ім’я режисера" />
+                </div>
+            </div>
+
+            <div class="form-group mb-3">
+                <label class="form-label fw-bold">Опис:</label>
+                <InputTextArea @bind-Value="film.Description" class="form-control form-control-lg" rows="3" placeholder="Короткий опис фільму" />
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-bold">Жанр:</label>
+                    <InputText @bind-Value="film.Genre" class="form-control form-control-lg" placeholder="Приклад: Комедія, Драма" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-bold">Рік:</label>
+                    <InputNumber @bind-Value="film.ReleaseYear" class="form-control form-control-lg" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-bold">Тривалість (хв):</label>
+                    <InputNumber @bind-Value="film.DurationMinutes" class="form-control form-control-lg" />
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-bold">Ціна квитка:</label>
+                    <InputNumber @bind-Value="film.TicketPrice" class="form-control form-control-lg" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-bold">Дата початку:</label>
+                    <InputDate @bind-Value="film.StartDate" class="form-control form-control-lg" />
+                </div>
+                <div class="col-md-4 mb-3 d-flex align-items-center">
+                    <InputCheckbox @bind-Value="film.IsActive" class="form-check-input me-2 mt-0" />
+                    <label class="form-label fw-bold mb-0">Активний показ</label>
+                </div>
+            </div>
+
+            <div class="form-group mb-4">
+                <label class="form-label fw-bold">Постер URL:</label>
+                <InputText @bind-Value="film.PosterUrl" class="form-control form-control-lg" placeholder="Введіть посилання на постер" />
+            </div>
+
+            <div class="d-flex justify-content-end pt-3 border-top">
+                <NavLink href="films" class="btn btn-outline-secondary me-2 shadow-sm rounded-pill">Скасувати</NavLink>
+                <button type="submit" class="btn btn-success shadow-sm rounded-pill">
+                    <span class="oi oi-check me-2"></span> Зберегти
+                </button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter] public long? Id { get; set; }
+
+    private Film film = new Film
+    {
+        IsActive = true,
+        StartDate = DateTime.Now.Date,
+        EndDate = DateTime.Now.Date.AddMonths(1)
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id.HasValue && Id.Value != 0)
+        {
+            film = await Http.GetFromJsonAsync<Film>($"api/Films/{Id}") ?? film;
+            if (film.FilmID == null)
+            {
+                Navigation.NavigateTo("/films");
+            }
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        HttpResponseMessage response;
+        if (film.FilmID.HasValue && film.FilmID.Value != 0)
+            response = await Http.PutAsJsonAsync("api/Films", film);
+        else
+        {
+            film.FilmID = 0;
+            response = await Http.PostAsJsonAsync("api/Films", film);
+        }
+
+        if (response.IsSuccessStatusCode)
+        {
+            Navigation.NavigateTo("/films");
+        }
+        else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            Navigation.NavigateTo("/login");
+        }
+        else
+        {
+            Console.WriteLine($"API Error: {await response.Content.ReadAsStringAsync()}");
+        }
+    }
+}
+
+<style>
+    .film-form-card {
+        border-radius: 16px;
+        background-color: #fff;
+        padding: 25px;
+        box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+        transition: box-shadow 0.2s ease-in-out;
+    }
+
+        .film-form-card:hover {
+            box-shadow: 0 16px 32px rgba(0,0,0,0.2);
+        }
+
+    .btn {
+        transition: all 0.2s ease-in-out;
+    }
+
+        .btn:hover {
+            transform: scale(1.05);
+        }
+
+    .rounded-pill {
+        border-radius: 50px !important;
+    }
+
+    .form-control-lg {
+        border-radius: 0.5rem;
+    }
+
+    .row > .d-flex.align-items-center label {
+        margin-bottom: 0;
+        font-weight: 600;
+    }
+</style>

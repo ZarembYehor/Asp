@@ -1,0 +1,151 @@
+﻿@page "/screenings/create"
+@page "/screenings/edit/{Id:long}"
+@using BlazorApp1.Models
+@using Microsoft.AspNetCore.Authorization
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@attribute [Authorize]
+
+<h2 class="fw-bold text-primary mb-4">@(Id.HasValue ? "Редагування" : "Створення") сеансу</h2>
+
+@if (films == null)
+{
+    <p><em>Завантаження фільмів...</em></p>
+}
+else
+{
+    <div class="card shadow-lg rounded-4 border-0">
+        <div class="card-body">
+            <EditForm Model="@screening" OnValidSubmit="HandleValidSubmit">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="alert alert-warning p-2" />
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Фільм:</label>
+                        <InputSelect @bind-Value="screening.FilmID" class="form-select form-control shadow-sm rounded-pill">
+                            <option value="">-- Виберіть фільм --</option>
+                            @foreach (var film in films)
+                            {
+                                <option value="@film.FilmID">@film.Title (@film.ReleaseYear)</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => screening.FilmID)" class="text-danger small" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Час початку:</label>
+                        <InputDate @bind-Value="screening.StartTime" class="form-control shadow-sm rounded-pill" />
+                        <ValidationMessage For="@(() => screening.StartTime)" class="text-danger small" />
+                    </div>
+                </div>
+
+                <div class="row g-3 mt-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Номер залу (1-20):</label>
+                        <InputNumber @bind-Value="screening.CinemaHall" class="form-control shadow-sm rounded-pill" />
+                        <ValidationMessage For="@(() => screening.CinemaHall)" class="text-danger small" />
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <NavLink href="screenings" class="btn btn-outline-secondary btn-lg shadow-sm rounded-pill">
+                        <span class="oi oi-x me-2"></span> Скасувати
+                    </NavLink>
+                    <button type="submit" class="btn btn-success btn-lg shadow-sm rounded-pill">
+                        <span class="oi oi-check me-2"></span> Зберегти
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public long? Id { get; set; }
+
+    private Screening screening = new Screening { StartTime = DateTime.Now };
+    private List<Film>? films;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var viewModel = await Http.GetFromJsonAsync<FilmsListViewModel>("api/Films");
+            films = viewModel?.Films?.ToList() ?? new List<Film>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching film list for dropdown: {ex.Message}");
+            films = new List<Film>();
+        }
+
+        if (Id.HasValue && Id.Value != 0)
+        {
+            screening = await Http.GetFromJsonAsync<Screening>($"api/Screenings/{Id}") ?? screening;
+            if (screening.ScreeningID == null)
+            {
+                Navigation.NavigateTo("/screenings");
+            }
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        HttpResponseMessage response;
+        if (screening.ScreeningID.HasValue && screening.ScreeningID.Value != 0)
+        {
+            response = await Http.PutAsJsonAsync("api/Screenings", screening);
+        }
+        else
+        {
+            screening.ScreeningID = 0;
+            response = await Http.PostAsJsonAsync("api/Screenings", screening);
+        }
+
+        if (response.IsSuccessStatusCode)
+        {
+            Navigation.NavigateTo("/screenings");
+        }
+        else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            Navigation.NavigateTo("/login");
+        }
+        else
+        {
+            Console.WriteLine($"API Error: {await response.Content.ReadAsStringAsync()}");
+        }
+    }
+}
+
+<style>
+    .card {
+        border-radius: 16px;
+    }
+
+    .form-control, .form-select {
+        transition: box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+        .form-control:focus, .form-select:focus {
+            box-shadow: 0 0 8px rgba(0,123,255,0.5);
+            transform: scale(1.02);
+        }
+
+    .btn {
+        transition: transform 0.2s ease;
+    }
+
+        .btn:hover {
+            transform: scale(1.05);
+        }
+
+    .rounded-pill {
+        border-radius: 50px !important;
+    }
+
+    .shadow-sm {
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15) !important;
+    }
+</style>

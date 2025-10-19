@@ -1,0 +1,17 @@
+﻿@page "/logout"
+@using BlazorApp1.Services
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<div class="text-center mt-5">
+    <h3 class="text-danger">Вихід...</h3>
+    <p class="text-muted">Зачекайте, будь ласка, система завершує сеанс.</p>
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthService.Logout();
+        Navigation.NavigateTo("/", forceLoad: true);
+    }
+}

@@ -1,0 +1,113 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+
+<header>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm py-3 px-4">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold text-warning" href="">
+                🎬 Кінотеатр <span class="text-light">Admin</span>
+            </a>
+
+            <button class="navbar-toggler" type="button" @onclick="ToggleNavMenu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="@NavMenuCssClass collapse navbar-collapse">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+                    <li class="nav-item">
+                        <NavLink class="nav-link text-success fw-semibold" href="book">
+                            <i class="oi oi-basket me-2"></i> Бронювання місць
+                        </NavLink>
+                    </li>
+
+                    <li class="nav-item">
+                        <NavLink class="nav-link" href="films">
+                            <i class="oi oi-list-rich me-2"></i> Фільми
+                        </NavLink>
+                    </li>
+
+                    <li class="nav-item">
+                        <NavLink class="nav-link" href="screenings">
+                            <i class="oi oi-calendar me-2"></i> Сеанси
+                        </NavLink>
+                    </li>
+                </ul>
+
+                <AuthorizeView>
+                    <Authorized>
+                        <div class="d-flex align-items-center gap-3">
+                            <NavLink class="nav-link text-warning fw-semibold" href="profile">
+                                <i class="oi oi-person me-1"></i> @context.User.Identity?.Name
+                            </NavLink>
+                            <NavLink class="btn btn-outline-danger btn-sm fw-semibold" href="logout">
+                                <i class="oi oi-account-logout me-1"></i> Вийти
+                            </NavLink>
+                        </div>
+                    </Authorized>
+
+                    <NotAuthorized>
+                        <NavLink class="btn btn-success btn-sm fw-semibold" href="login">
+                            <i class="oi oi-account-login me-1"></i> Увійти / Реєстрація
+                        </NavLink>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </div>
+        </div>
+    </nav>
+</header>
+
+<style>
+    .navbar {
+        font-size: 1rem;
+        letter-spacing: 0.3px;
+        backdrop-filter: blur(6px);
+        transition: all 0.3s ease-in-out;
+    }
+
+    .navbar-brand {
+        font-size: 1.3rem;
+        letter-spacing: 0.5px;
+        transition: all 0.2s ease-in-out;
+    }
+
+        .navbar-brand:hover {
+            text-shadow: 0 0 6px #ffc107;
+        }
+
+    .nav-link {
+        color: #ddd !important;
+        transition: all 0.25s ease;
+        border-radius: 0.4rem;
+        padding: 0.55rem 0.9rem !important;
+    }
+
+        .nav-link:hover {
+            color: #fff !important;
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .nav-link.active {
+            background-color: #ffc107 !important;
+            color: #000 !important;
+            font-weight: 600;
+            box-shadow: 0 0 10px rgba(255, 193, 7, 0.4);
+        }
+
+    .btn {
+        font-weight: 500;
+        transition: all 0.2s ease-in-out;
+    }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+    
+</style>
+
+@code {
+    private bool collapseNavMenu = true;
+    private string? NavMenuCssClass => collapseNavMenu ? "" : "show";
+    private void ToggleNavMenu() => collapseNavMenu = !collapseNavMenu;
+}

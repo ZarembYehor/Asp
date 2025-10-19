@@ -1,0 +1,128 @@
+﻿@page "/screenings"
+@using BlazorApp1.Models
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject IJSRuntime JsRuntime
+
+<h2 class="fw-bold text-primary mb-4">Управління сеансами</h2>
+
+<AuthorizeView>
+    <Authorized>
+        <p>
+            <NavLink href="/screenings/create" class="btn btn-success shadow-sm rounded-pill">
+                <span class="oi oi-plus me-2"></span> Створити новий сеанс
+            </NavLink>
+        </p>
+    </Authorized>
+    <NotAuthorized>
+        <p class="alert alert-warning">Для управління сеансами, будь ласка, увійдіть.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@if (screenings == null)
+{
+    <p><em>Завантаження сеансів...</em></p>
+}
+else if (!screenings.Any())
+{
+    <p class="alert alert-info">Сеанси не знайдено.</p>
+}
+else
+{
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+        @foreach (var screening in screenings)
+        {
+            <div class="col">
+                <div class="card shadow-sm h-100 screening-card">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <span>Сеанс ID: <strong>@screening.ScreeningID</strong></span>
+                        <AuthorizeView>
+                            <Authorized>
+                                <div>
+                                    <NavLink href="@($"/screenings/edit/{screening.ScreeningID}")" class="btn btn-sm btn-info text-white me-2 rounded-pill">Редагувати</NavLink>
+                                    <button class="btn btn-sm btn-danger rounded-pill" @onclick="() => DeleteScreening(screening.ScreeningID)">Видалити</button>
+                                </div>
+                            </Authorized>
+                        </AuthorizeView>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title text-primary mb-2">@screening.Film?.Title</h5>
+                        <p class="card-text mb-1"><strong>Час початку:</strong> @screening.StartTime?.ToString("dd.MM.yyyy HH:mm")</p>
+                        <p class="card-text mb-1"><strong>Зал:</strong> @screening.CinemaHall</p>
+                        @if (screening.Film != null)
+                        {
+                            <NavLink href="@($"/films/{screening.Film.FilmID}")" class="btn btn-sm btn-outline-primary mt-2 rounded-pill">
+                                Переглянути фільм
+                            </NavLink>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<Screening>? screenings;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadScreenings();
+    }
+
+    private async Task LoadScreenings()
+    {
+        try
+        {
+            screenings = await Http.GetFromJsonAsync<List<Screening>>("api/Screenings");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading screenings: {ex.Message}");
+            screenings = new List<Screening>();
+        }
+    }
+
+    private async Task DeleteScreening(long? screeningId)
+    {
+        if (!screeningId.HasValue) return;
+
+        if (await JsRuntime.InvokeAsync<bool>("confirm", $"Ви впевнені, що хочете видалити сеанс ID {screeningId}?"))
+        {
+            var result = await Http.DeleteAsync($"api/Screenings/{screeningId}");
+            if (result.IsSuccessStatusCode)
+            {
+                await LoadScreenings();
+            }
+        }
+    }
+}
+
+<style>
+    .screening-card {
+        border-radius: 16px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+        .screening-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.25);
+        }
+
+    .card-header {
+        border-top-left-radius: 16px;
+        border-top-right-radius: 16px;
+    }
+
+    .btn {
+        transition: transform 0.2s ease;
+    }
+
+        .btn:hover {
+            transform: scale(1.05);
+        }
+
+    .rounded-pill {
+        border-radius: 50px !important;
+    }
+</style>

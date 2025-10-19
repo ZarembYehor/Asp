@@ -1,0 +1,19 @@
+﻿@inherits LayoutComponentBase
+
+<div class="page bg-light"> 
+    
+    <div class="sidebar bg-dark text-white"> 
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4 bg-white shadow-sm d-flex justify-content-end align-items-center"> 
+            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank" class="text-secondary me-3">Про Blazor</a>
+            <span class="text-muted">Адмін-панель</span>
+        </div>
+
+        <article class="content px-4 py-4">
+            @Body
+        </article>
+    </main>
+</div>

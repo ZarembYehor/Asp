@@ -1,0 +1,176 @@
+﻿@page "/films"
+@using BlazorApp1.Models
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject IJSRuntime JsRuntime
+
+<div class="films-container py-5">
+    <h1 class="fw-bold text-primary mb-4">🎬 Управління фільмами</h1>
+
+    <AuthorizeView>
+        <Authorized>
+            <p>
+                <a href="/films/create" class="btn btn-success shadow-sm rounded-pill">
+                    <span class="oi oi-plus me-2"></span> Створити новий фільм
+                </a>
+            </p>
+        </Authorized>
+        <NotAuthorized>
+            <p class="alert alert-info">Увійдіть для управління фільмами.</p>
+        </NotAuthorized>
+    </AuthorizeView>
+
+    @if (filmsList == null)
+    {
+        <p class="text-muted"><em>Завантаження...</em></p>
+    }
+    else if (!filmsList.Films.Any())
+    {
+        <p class="text-muted"><em>Фільми відсутні.</em></p>
+    }
+    else
+    {
+        <div class="table-responsive shadow-sm rounded-4 overflow-hidden">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-gradient text-white">
+                    <tr>
+                        <th>ID</th>
+                        <th>Назва</th>
+                        <th>Жанр</th>
+                        <th>Рік</th>
+                        <th>Ціна</th>
+                        <th>Активний</th>
+                        <th>Дії</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var film in filmsList.Films)
+                    {
+                        <tr>
+                            <td>@film.FilmID</td>
+                            <td>
+                                <a href="/films/@film.FilmID" class="fw-bold text-decoration-none text-primary">@film.Title</a>
+                            </td>
+                            <td>@film.Genre</td>
+                            <td>@film.ReleaseYear</td>
+                            <td>@film.TicketPrice.ToString("C")</td>
+                            <td>@(film.IsActive ? "Так" : "Ні")</td>
+                            <td>
+                                <AuthorizeView>
+                                    <Authorized>
+                                        <a href="/films/edit/@film.FilmID" class="btn btn-sm btn-info text-white me-2 shadow-sm rounded-pill">Редагувати</a>
+                                        <button class="btn btn-sm btn-danger shadow-sm rounded-pill" @onclick="() => DeleteFilm(film.FilmID)">Видалити</button>
+                                    </Authorized>
+                                </AuthorizeView>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private FilmsListViewModel? filmsList;
+    private int currentPage = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFilms();
+    }
+
+    private async Task LoadFilms(int page = 1)
+    {
+        try
+        {
+            currentPage = page;
+            var response = await Http.GetFromJsonAsync<FilmsListViewModel>($"api/Films?page={currentPage}");
+            filmsList = response;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading films: {ex.Message}");
+            filmsList = new FilmsListViewModel();
+        }
+    }
+
+    private async Task DeleteFilm(long? filmId)
+    {
+        if (!filmId.HasValue) return;
+
+        if (await JsRuntime.InvokeAsync<bool>("confirm", $"Ви впевнені, що хочете видалити фільм ID {filmId}?"))
+        {
+            var result = await Http.DeleteAsync($"api/Films/{filmId}");
+            if (result.IsSuccessStatusCode)
+            {
+                await LoadFilms(currentPage);
+            }
+            else if (result.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                Navigation.NavigateTo("/login");
+            }
+        }
+    }
+}
+
+<style>
+    .films-container {
+        background: linear-gradient(135deg, #f9fafb 0%, #eef2ff 100%);
+        min-height: calc(100vh - 80px);
+        padding-bottom: 40px;
+    }
+
+    h1 {
+        background: linear-gradient(90deg, #0d6efd, #6610f2);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    .table {
+        border-radius: 12px;
+        overflow: hidden;
+        background-color: white;
+    }
+
+    .table-gradient {
+        background: linear-gradient(90deg, #0d6efd, #6610f2);
+    }
+
+    .table th, .table td {
+        vertical-align: middle !important;
+    }
+
+    .btn {
+        transition: all 0.2s ease-in-out;
+    }
+
+        .btn:hover {
+            transform: scale(1.05);
+        }
+
+    .shadow-sm {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.08) !important;
+    }
+
+    .rounded-pill {
+        border-radius: 50px !important;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: rgba(13, 110, 253, 0.1);
+    }
+
+    a {
+        transition: color 0.2s ease-in-out;
+    }
+
+        a:hover {
+            color: #6610f2;
+            text-decoration: underline;
+        }
+</style>
